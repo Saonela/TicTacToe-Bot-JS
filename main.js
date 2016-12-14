@@ -7,10 +7,12 @@ let url = 'http://tictactoe.homedir.eu/game/' + room + '/player/' + player;
 let playerSymbol =  process.argv[3] == 1 ? 'x' : 'o';
 
 // let message = '[[\"x\", 2, \"y\",  0, \"v\", \"x\"], [\"x\",  0,   \"y\",   0, \"v\", \"x\"], [\"x\", 1,  \"y\",  1,   \"v\", \"x\"],]';
-// let message = '[[\"x\", 2, \"y\",  0, \"v\", \"x\"]]';
+let message = '[[\"x\", 0, \"y\",  0, \"v\", \"x\"]]';
+let message5 = '[[\"x\", 0, \"y\",  0, \"v\", \"x\"],[\"x\", 1, \"y\",  1, \"v\", \"o\"],[\"x\", 0, \"y\",  2, \"v\", \"x\"],[\"x\", 0, \"y\",  1, \"v\", \"o\"],[\"x\", 2, \"y\",  1, \"v\", \"x\"],[\"x\", 1, \"y\",  2, \"v\", \"o\"]]';
 
 // console.log('PARSE', parse(message));
 
+// console.log('DEFENDDD', defend(parse(message5), 'x'));
 play(url, '', playerSymbol)
 
 
@@ -26,7 +28,8 @@ function play(url, moves, player) {
 
 function makeMove (moves, player) {
   if(moves == '') {
-    return '[[\"x\", 1, \"y\",   1, \"v\", \"' + player + '\"]]';
+    // return '[[\"x\", 1, \"y\",   1, \"v\", \"' + player + '\"]]';
+    return '[[\"x\", 0, \"y\",   0, \"v\", \"' + player + '\"]]';
   } else {
     let movesArr = parse(moves);
     let status = defend(movesArr, player);
@@ -39,41 +42,36 @@ function makeMove (moves, player) {
 }
 
 function makeRandomMove(moves, x, y, player) {
-  console.log('makeRandomMove',x,' ',y);
   let result;
-  if (x == 3) {
+  if (x >= 3) {
     console.log('no moves left!');
-  } else if (y == 3) {
-    makeRandomMove(moves, x+1, 0, player)
+    return;
+    // return makeRandomDiagMove(moves, 0, 0 ,player);;
+  } else if (y >= 3) {
+    return makeRandomMove(moves, x+1, 0, player)
   } else {
     let cell = moves.filter((move) => {
       return move.x == x && move.y == y;
     });
-    console.log('cell',cell);
     if(cell.length == 0) {
-      console.log('Kai cia ateina x nuluzta kazkodel.',cell);
       result =  buildMove(x, y, player);
       return result;
     } else {
       return makeRandomMove(moves, x, y+1 ,player);
     }
   }
-  return result;
 }
 
 function makeRandomDiagMove(moves, x, y, player) {
-    console.log('makeRandomDiAGMove',x,' ',y);
   if (x == 4) {
     let some =  makeRandomMove(moves, 0, 0, player);
-    console.log('MAKE RANDOM MOVIE RESULT', some)
     return some;
   } else if (y == 4) {
-    let some =  makeRandomMove(moves, 0, 0, player);
-    console.log('MAKE RANDOM MOVIE GOOD RESULT', some)
+    let some =  makeRandomDiagMove(moves, x+2, 0, player);
     return some;
   } else {
-    if (isCenterFree(moves) && player == 'o') {
-      return makeRandomMove(moves, 0, 0, player);
+    if (isCenterFree(moves).length == 0 && player == 'o') {
+      return makeRandomMove(moves, 1, 1, player);
     } else {
       let cell = moves.filter((move) => {
         return move.x == x && move.y == y;
@@ -97,6 +95,7 @@ function defend (moves, player) {
   let columnStatus = checkColumns(moves,2,player);
   let rowStatus = checkRows(moves,2,player);
   let diagonalStatus = checkDiagonals(moves,2,player);
+  console.log('C',columnStatus,'R',rowStatus,'D',diagonalStatus);
   if(rowStatus != false) {
     return '[\"x\",' + rowStatus.x + ', \"y\", ' + rowStatus.y + ', \"v\", \"' + player + '\"]';
   } else if(columnStatus != false) {
@@ -119,7 +118,7 @@ function checkRows (moves, pos, player) {
     let countO = countPlayers(row, 'o')
     if((countX == 2 && countO == 0) || (countO == 2  && countX == 0)) {
         let moveCoor = checkEmpty(row, 'y');
-      if(moveCoor) {
+      if(moveCoor !== false) {
         return {x:pos, y:moveCoor};
       }
     }
@@ -238,6 +237,10 @@ function postRequest(url, body) {
        "Content-Type": "application/json+list"
      }
   }, function (error, response, body){
+      if (!error && response.statusCode == 200) {
+        console.log('SIUNCIAM');
+      }
+
   });
 }
 
@@ -248,11 +251,15 @@ function getRequest(url, player) {
     headers: { "Accept": "application/json+list" }
    }, function (error, response, body) {
       if (!error && response.statusCode == 200) {
+        console.log('LAUKIAM');
+
           let body = makeMove(response.body, player);
+          console.log('RES',body)
           postRequest(url, body);
           play(url, response.body, player);
       } else {
         console.log('Error during GET. Status code:', response.statusCode);
+        console.log(response.body);
       }
   })
 }
